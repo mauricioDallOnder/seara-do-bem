@@ -1,0 +1,26 @@
+.container {
+    display: flex;
+    justify-content: space-around;
+    margin: 0 auto;
+    margin-top: 10%;
+  }
+  
+  .item {
+    display: flex;
+    justify-content: space-between;
+    cursor: pointer;
+    align-items: baseline;
+    gap: 100px;
+  }
+  
+  .item img {
+    width: 100%;
+    max-width: 200px;
+    height: auto;
+  }
+  
+  .item h1 {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+  }
