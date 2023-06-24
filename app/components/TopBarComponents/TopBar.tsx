@@ -65,7 +65,7 @@ export default function ResponsiveAppBar() {
                 <img src="https://firebasestorage.googleapis.com/v0/b/chat-dos-otarios.appspot.com/o/ceab%2Falunos.6466ab2a87c256.49461801.jpg?alt=media&token=42b3312e-02ba-4379-8d1a-8ae0fc96b20a" alt="" />
               </Avatar>
             </Link>
-            <Typography>Clique ao lado para abrir o menu:</Typography>
+            
             <IconButton
               edge="start"
               color="inherit"
