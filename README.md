@@ -26,11 +26,11 @@ This project was built using the following technologies:
   <br/>
   <img src="https://firebasestorage.googleapis.com/v0/b/seara-do-bem.appspot.com/o/Captura%20de%20Tela%202023-05-26%20a%CC%80s%2014.45.13.png?alt=media&token=24659101-7f1b-445a-9050-bd3fee0ecce6" width="500" />
   
-  <img src="https://firebasestorage.googleapis.com/v0/b/seara-do-bem.appspot.com/o/Captura%20de%20Tela%202023-05-26%20a%CC%80s%2016.26.14.png?alt=media&token=8961a6b3-6219-46c3-ba03-b17f3511ab01" width="500" />
+ 
 
- <br/>
+
   <img src="https://firebasestorage.googleapis.com/v0/b/seara-do-bem.appspot.com/o/Captura%20de%20Tela%202023-05-26%20a%CC%80s%2016.31.57.png?alt=media&token=67e46dd5-0434-4ac2-b2e2-a951379c6f40" width="500" />
-   <img src="https://firebasestorage.googleapis.com/v0/b/seara-do-bem.appspot.com/o/Captura%20de%20Tela%202023-05-26%20a%CC%80s%2016.29.52.png?alt=media&token=26eb9025-bc8a-48aa-873b-327e838e8aa7" width="500" />
+
 </div>
 
 
