@@ -23,9 +23,9 @@ import { TabelaInativos } from '../TabelaBeneficiarios/TabelaDadosInativos';
 const pages = [
   { title: "Cadastro", link: "/Registration" },
   { title: "Atualização", link: "/UpdateData" },
-  { title: "Frequencia Mensal", link: "https://script.google.com/macros/s/AKfycbzwFdWLHqfzvIwef5GlrhwX4IKlOak3cwmhrUJRRU9ZnoyiVPVjb9IUJHVycOhBZwYPLg/exec" },
+  { title: "Frequencia Mensal", link: "https://script.google.com/macros/s/AKfycbxHQHqhYDae5zRtmHcIoHLlIlBkJKIdxBy__-lm4O_nMIHJ0T3tt6r28rwHBhvykGsKKA/exec" },
 ];
-//atualizando link
+//link atualizado
 export default function ResponsiveAppBar() {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
 
