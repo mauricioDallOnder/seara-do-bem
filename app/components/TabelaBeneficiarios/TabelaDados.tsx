@@ -1,140 +1,90 @@
-//atualizado 
-"use client";
-import axios from "axios";
-import React, {
-  createContext,
-  useState,
-  useEffect,
-  ReactNode,
-  useContext,
-} from "react";
-export type Dependente = {
-  nome: string;
-  parentesco: string;
-  nascimento: string;
-  escolarização: string;
-};
+// atualização
+import { useData, InputsProps } from "@/app/context/DataContext";
+import { Button } from "@mui/material";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
-export type InputsProps = {
-  data_ingresso: string;
-  nome_beneficiario: string;
-  telefone: string;
-  rua: string;
-  numero: string;
-  bairro: string;
-  referencia: string;
-  tipo_habitacao: string;
-  numero_nucleo_familiar: number;
-  renda_familiar: string;
-  Observações: string;
-  estadoCivil: string;
-  nascimento: string;
-  rg: string;
-  cpf: string;
-  profissao: string;
-  conjuge_nome: string;
-  conjuge_telefone: string;
-  conjuge_ocupacao: string;
-  conjuge_profissao: string;
-  parentes_dependentes: string;
-  dependentes?: Dependente[];
-  nome_dependente1?: string;
-  parentesco_dependente1?: string;
-  nascimento_dependente1?: string;
-  escolarizacao_dependente1?: string;
-  nome_dependente2?: string;
-  parentesco_dependente2?: string;
-  nascimento_dependente2?: string;
-  escolarizacao_dependente2?: string;
-  nome_dependente3?: string;
-  parentesco_dependente3?: string;
-  nascimento_dependente3?: string;
-  escolarizacao_dependente3?: string;
-  nome_dependente4?: string;
-  parentesco_dependente4?: string;
-  nascimento_dependente4?: string;
-  escolarizacao_dependente4?: string;
-  nome_dependente5?: string;
-  parentesco_dependente5?: string;
-  nascimento_dependente5?: string;
-  escolarizacao_dependente5?: string;
-  faltas?: string;
-  assinatura?:string
-};
+export default function TabelaDados () {
+  const { data } = useData();
+  const date = new Date();
+  const formatter = new Intl.DateTimeFormat('pt-BR', { month: 'long' });
+  const currentMonth = formatter.format(date);
+  console.log(currentMonth)
+  const exportPDF = (items: InputsProps[]) => {
+    const unit = "pt";
+    const size = "A4";
+    const orientation = "landscape";
 
-export type StringKeyedInputsProps = {
-  [key: string]: any;
-};
+    const marginLeft = 10;
+    const doc = new jsPDF(orientation, unit, size);
 
-export interface FormDataTable extends InputsProps {
-  data_ingresso: string;
-  nome_beneficiario: string;
-  telefone: string;
-  endereco: string;
-  Observações: string;
-}
+    doc.setFontSize(15);
 
-interface ChildrenProps {
-  children: ReactNode;
-}
+    const filteredData = items
+      .filter((item) =>
+        !Object.values(item).some(value =>
+          typeof value === "string" && value.includes("DESLIGADO")
+        )
+      )
+      .map((elt, index) => [ // Adicionando o index para a coluna Ordem
+        index + 1,
+        elt.nome_beneficiario || "",
+        elt.data_ingresso || "",
+        elt.telefone || "",
+        elt.rua || "",
+        elt.Observações|| "",
+        elt.assinatura || "",
+      ]);
 
-interface DataContextType {
-  data: InputsProps[];
-  sendDataToApi: (data: InputsProps) => Promise<void>;
-  updateDataInApi: (data: InputsProps) => Promise<void>;
-}
+    doc.text(`Tabela de beneficiarios Seara do Bem(ativos no programa no mês de ${currentMonth}/2024)`, marginLeft, 30);
 
-const DataContext = createContext<DataContextType>({
-  data: [],
-  sendDataToApi: async () => {}, // Adicione esta linha
-  updateDataInApi:async () => {},
+    autoTable(doc, {
+      head: [
+        [
+          "N",
+          "NOME",
+          "DATA DE INGRESSO",
+          "TELEFONE",
+          "RUA",
+          "OBSERVAÇÕES",
+          "ASSINATURA",
+        
+        ],
+      ],
+      body: filteredData,
 
-});
+      bodyStyles: {
+        valign: "middle",
+        halign: "center",
+        cellWidth: "wrap",
+      },
+      columnStyles: {
+        0: { cellWidth: 20 },
+        1: { cellWidth: 130 },
+        2: { cellWidth: 70 },
+        3: { cellWidth: 70 },
+        4: { cellWidth: 150 },
+        5: { cellWidth: 110 },
+        
+      },
 
-const useData = () => {
-  const context = useContext(DataContext);
-  return context;
-};
-
-const DataProvider: React.FC<ChildrenProps> = ({ children }) => {
-  const [data, setData] = useState<InputsProps[]>([]);
-
-  useEffect(() => {
-    const getDataToApi = async () => {
-      try {
-        const response = await axios.get("https://script.google.com/macros/s/AKfycbwsqAaSAt_gbaHAFiutafHuMnO3diePRP_SefiT3Of_sTx2vSTDdZAYDBEpIhOJaBTw/exec");
-        console.log('Response data:', response.data); // Adicione isso para verificar a estrutura da resposta
-        setData(response.data);
-      } catch (error) {
-        console.error("Ocorreu um erro ao buscar dados da API:", error);
-      }
-    };
-    getDataToApi();
-  }, [data]); 
-  
-
-  const sendDataToApi = async (data: InputsProps) => {
-    try {
-      const response = await axios.post("/api/proxy?method=post", data); // Indicando que você deseja fazer uma requisição POST
-      setData(response.data);
-    } catch (error) {
-      console.error("Ocorreu um erro ao enviar dados para a API:", error);
-    }
-  };
-  const updateDataInApi = async (dataToUpdate: InputsProps) => {
-    try {
-      const response = await axios.post("/api/proxy?method=post", { ...dataToUpdate, method: "put" }); 
-      setData(response.data);
-    } catch (error) {
-      console.error("Ocorreu um erro ao atualizar os dados na API:", error);
-    }
+      styles: {
+        cellPadding: { top: 2, right: 2, bottom: 2, left: 2 },
+        lineColor: [44, 62, 80],
+        lineWidth: 0.75,
+      },
+    });
+    doc.save("tabela de beneficiarios ativos.pdf");
   };
 
   return (
-    <DataContext.Provider value={{ data, sendDataToApi,updateDataInApi }}>
-      {children}
-    </DataContext.Provider>
+    <Button
+      variant="contained"
+      color="success"
+      size="small"
+      onClick={() => exportPDF(data)}
+    >
+      Tabela de ativos do programa  
+    </Button>
   );
 };
-
-export { DataContext, DataProvider, useData };
