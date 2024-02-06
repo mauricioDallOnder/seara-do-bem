@@ -6,7 +6,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   let url: string;
 //atualizando proxy
   // The URL is the same for GET, POST, and PUT in this case
-  url = 'https://script.google.com/macros/s/AKfycbw142rSpzBE6hrMu_SdnvC-LMAcNa99h8cU3e3W1UF3aqZ4MHjSVLpOZzBihtahuZpb/exec';
+  url = 'https://script.google.com/macros/s/AKfycbwsqAaSAt_gbaHAFiutafHuMnO3diePRP_SefiT3Of_sTx2vSTDdZAYDBEpIhOJaBTw/exec';
 
   try {
     // Determine the HTTP method to use based on the 'method' query parameter
