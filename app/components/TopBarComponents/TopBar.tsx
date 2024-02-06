@@ -18,8 +18,9 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import Link from 'next/link';
-import {TabelaDados} from "../TabelaBeneficiarios/TabelaDados"
+
 import { TabelaInativos } from '../TabelaBeneficiarios/TabelaDadosInativos';
+import TabelaDados from '../TabelaBeneficiarios/TabelaDados';
 const pages = [
   { title: "Cadastro", link: "/Registration" },
   { title: "Atualização", link: "/UpdateData" },
