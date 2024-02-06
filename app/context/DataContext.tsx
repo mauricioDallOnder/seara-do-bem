@@ -59,6 +59,7 @@ export type InputsProps = {
   nascimento_dependente5?: string;
   escolarizacao_dependente5?: string;
   faltas?: string;
+  assinatura?:string
 };
 
 export type StringKeyedInputsProps = {
@@ -101,7 +102,7 @@ const DataProvider: React.FC<ChildrenProps> = ({ children }) => {
   useEffect(() => {
     const getDataToApi = async () => {
       try {
-        const response = await axios.get("https://script.google.com/macros/s/AKfycbw142rSpzBE6hrMu_SdnvC-LMAcNa99h8cU3e3W1UF3aqZ4MHjSVLpOZzBihtahuZpb/exec");
+        const response = await axios.get("https://script.google.com/macros/s/AKfycbwsqAaSAt_gbaHAFiutafHuMnO3diePRP_SefiT3Of_sTx2vSTDdZAYDBEpIhOJaBTw/exec");
         console.log('Response data:', response.data); // Adicione isso para verificar a estrutura da resposta
         setData(response.data);
       } catch (error) {
