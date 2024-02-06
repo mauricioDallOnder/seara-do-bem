@@ -6,7 +6,10 @@ import autoTable from "jspdf-autotable";
 
 export const TabelaDados = () => {
   const { data } = useData();
-
+  const date = new Date();
+  const formatter = new Intl.DateTimeFormat('pt-BR', { month: 'long' });
+  const currentMonth = formatter.format(date);
+  console.log(currentMonth)
   const exportPDF = (items: InputsProps[]) => {
     const unit = "pt";
     const size = "A4";
@@ -29,12 +32,11 @@ export const TabelaDados = () => {
         elt.data_ingresso || "",
         elt.telefone || "",
         elt.rua || "",
-        elt.numero || "",
-        elt.bairro || "",
-        elt.Observações || "",
+        elt.Observações|| "",
+        elt.assinatura || "",
       ]);
 
-    doc.text("Tabela de beneficiarios Seara do Bem(ativos no programa)", marginLeft, 30);
+    doc.text(`Tabela de beneficiarios Seara do Bem(ativos no programa no mês de ${currentMonth}/2024)`, marginLeft, 30);
 
     autoTable(doc, {
       head: [
@@ -44,9 +46,8 @@ export const TabelaDados = () => {
           "DATA DE INGRESSO",
           "TELEFONE",
           "RUA",
-          "NUMERO",
-          "BAIRRO",
-          "OBS",
+          "OBSERVAÇÕES",
+          "ASSINATURA",
         
         ],
       ],
@@ -62,8 +63,8 @@ export const TabelaDados = () => {
         1: { cellWidth: 130 },
         2: { cellWidth: 70 },
         3: { cellWidth: 70 },
-        4: { cellWidth: 130 },
-        5: { cellWidth: 70 },
+        4: { cellWidth: 150 },
+        5: { cellWidth: 110 },
         
       },
 
@@ -83,7 +84,7 @@ export const TabelaDados = () => {
       size="small"
       onClick={() => exportPDF(data)}
     >
-      Tabela de ativos do programa
+      Tabela de ativos do programa  
     </Button>
   );
 };
