@@ -21,6 +21,7 @@ import Link from 'next/link';
 
 import { TabelaInativos } from '../TabelaBeneficiarios/TabelaDadosInativos';
 import TabelaDados from '../TabelaBeneficiarios/TabelaDados';
+import TabelaNecessidades from '../TabelaBeneficiarios/TabelaNecessidades';
 const pages = [
   { title: "Cadastro", link: "/Registration" },
   { title: "Atualização", link: "/UpdateData" },
@@ -49,6 +50,7 @@ export default function ResponsiveAppBar() {
       ))}
       <TabelaDados/>
       <TabelaInativos/>
+      <TabelaNecessidades/>
     </List>
   );
 
