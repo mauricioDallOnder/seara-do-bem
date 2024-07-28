@@ -102,7 +102,7 @@ const DataProvider: React.FC<ChildrenProps> = ({ children }) => {
   useEffect(() => {
     const getDataToApi = async () => {
       try {
-        const response = await axios.get("https://script.google.com/macros/s/AKfycbwsqAaSAt_gbaHAFiutafHuMnO3diePRP_SefiT3Of_sTx2vSTDdZAYDBEpIhOJaBTw/exec");
+        const response = await axios.get("https://script.google.com/macros/s/AKfycbwPtusYugIept4aEoRqpGsSAW07rl6mbIctHo7J_TiAnAZyOexKExOBqF9sSr9NIaBrbQ/exec");
         console.log('Response data:', response.data); // Adicione isso para verificar a estrutura da resposta
         setData(response.data);
       } catch (error) {

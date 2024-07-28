@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-//https://seara-do-bem.vercel.app/api/proxy?method=update
 import {
   Box,
   Button,
@@ -8,14 +6,11 @@ import {
   Grid,
   InputLabel,
   List,
-  MenuItem,
-  Select,
-  SelectChangeEvent,
   TextField,
   Typography,
 } from "@mui/material";
+import { Autocomplete } from "@mui/material";
 import { useForm, SubmitHandler } from "react-hook-form";
-
 import { InputsProps, useData } from "../app/context/DataContext";
 import {
   BoxStyleCadastro,
@@ -38,34 +33,44 @@ import convertToDependentes, {
 export default function ConsultaBeneficiarios() {
   const theme = useTheme();
   const [sending, setisSending] = useState(false);
-  const [searchName, setSearchName] = useState<string>("");
+  const [searchName, setSearchName] = useState<string | null>(null);
   const { data, updateDataInApi } = useData();
-  const { register, setValue, handleSubmit, reset } = useForm<InputsProps>({});
-//atualizando update
-  // Chamando fillFormWithbeneficiarioData quando searchName mudar
+  const { register, setValue, handleSubmit, reset, formState: { errors } } = useForm<InputsProps>({});
+
   useEffect(() => {
     if (searchName) {
       fillFormWithbeneficiarioData(searchName);
     }
   }, [searchName]);
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
   const fillFormWithbeneficiarioData = (name: string) => {
     const beneficiario = data.find((item) => item.nome_beneficiario === name);
     if (beneficiario) {
       Object.entries(beneficiario).forEach(([key, value]) => {
-        return setValue(key as keyof InputsProps, value);
+        // Verificar se o campo é uma data e formatar se necessário
+        const formattedValue =
+          key === "data_ingresso" || key.startsWith("nascimento")
+            ? formatDate(value as string)
+            : value;
+        setValue(key as keyof InputsProps, formattedValue);
       });
     } else {
       console.log(`Could not find beneficiario with name "${name}"`);
     }
   };
 
-  const handleSearchNameChange = (event: SelectChangeEvent<string>) => {
-    setSearchName(event.target.value);
-  };
-
   const onSubmit: SubmitHandler<InputsProps> = async (formData) => {
-    setisSending(true); // Defina isSending como true antes de enviar os dados
+    setisSending(true);
     try {
       await updateDataInApi(formData);
       formData.dependentes = convertToDependentes(formData);
@@ -77,10 +82,10 @@ export default function ConsultaBeneficiarios() {
     } catch (error) {
       console.error("Error submitting form:", error);
     } finally {
-      setisSending(false); // Defina isSending como false depois que a solicitação terminar
+      setisSending(false);
     }
   };
-console.log(data)
+
   return (
     <Layout>
       <Container>
@@ -119,45 +124,35 @@ console.log(data)
               <Typography variant="h6" component="label" htmlFor="name">
                 NOME
               </Typography>
-              <FormControl sx={{ m: 1, minWidth: 120 }} size="small">
-                <Select
-                  className="form-input"
-                  value={searchName}
-                  onChange={handleSearchNameChange}
-                >
-                  <MenuItem value="-">-</MenuItem>
-                  {Array.isArray(data) &&
-                    data.map((item, key) => (
-                      <MenuItem key={key} value={item.nome_beneficiario}>
-                        {item.nome_beneficiario}
-                      </MenuItem>
-                    ))}
-                </Select>
+              <FormControl sx={{ m: 1, minWidth: 240 }} size="small">
+                <Autocomplete
+                  options={
+                    Array.isArray(data)
+                      ? data.map((item, index) => ({
+                          id: `${item.nome_beneficiario}-${index}`,
+                          label: item.nome_beneficiario,
+                        }))
+                      : []
+                  }
+                  getOptionLabel={(option) =>
+                    typeof option === "string" ? option : option.label
+                  }
+                  renderInput={(params) => (
+                    <TextField {...params} variant="outlined" fullWidth />
+                  )}
+                  onChange={(event, newValue) =>
+                    setSearchName(
+                      typeof newValue === "string"
+                        ? newValue
+                        : newValue?.label || ""
+                    )
+                  }
+                  freeSolo
+                  autoSelect
+                  autoHighlight
+                  sx={{ width: 300 }}
+                />
               </FormControl>
-              <Box
-                sx={{
-                  mt: 2,
-                  display: "flex",
-                  flexDirection: "row",
-                  justifyContent: "center",
-                  gap: theme.spacing(2),
-                }}
-              >
-                <Button
-                  variant="contained"
-                  type="button"
-                  onClick={() => fillFormWithbeneficiarioData(searchName)}
-                >
-                  Pesquisar
-                </Button>
-                <Button
-                  variant="contained"
-                  type="button"
-                  onClick={() => reset()}
-                >
-                  Limpar
-                </Button>
-              </Box>
             </Box>
 
             <List sx={ListStyle}>
@@ -165,7 +160,7 @@ console.log(data)
                 Seção 1 - Identificação do Beneficiário:
               </Typography>
               <Grid container spacing={2}>
-                {fieldsSessao1.map(({ label, id }) => (
+                {fieldsSessao1.map(({ label, id, validation }) => (
                   <Grid item xs={12} sm={6} key={id}>
                     <InputLabel>{label}</InputLabel>
                     <TextField
@@ -175,7 +170,9 @@ console.log(data)
                       sx={{
                         borderRadius: "4px",
                       }}
-                      {...register(id as keyof InputsProps)} // asserção de tipo aqui
+                      {...register(id as keyof InputsProps, validation)}
+                      error={!!errors[id as keyof InputsProps]}
+                      helperText={errors[id as keyof InputsProps]?.message}
                     />
                   </Grid>
                 ))}
@@ -188,7 +185,7 @@ console.log(data)
                   Seção 2 - Informações Pessoais:
                 </Typography>
                 <Grid container spacing={2}>
-                  {fieldsSessao2.map(({ label, id }) => (
+                  {fieldsSessao2.map(({ label, id}) => (
                     <Grid item xs={12} sm={6} key={id}>
                       <InputLabel>{label}</InputLabel>
                       <TextField
@@ -198,7 +195,9 @@ console.log(data)
                         sx={{
                           borderRadius: "4px",
                         }}
-                        {...register(id as keyof InputsProps)} // asserção de tipo aqui
+                        {...register(id as keyof InputsProps)}
+                        error={!!errors[id as keyof InputsProps]}
+                        helperText={errors[id as keyof InputsProps]?.message}
                       />
                     </Grid>
                   ))}
@@ -219,7 +218,9 @@ console.log(data)
                         sx={{
                           borderRadius: "4px",
                         }}
-                        {...register(id as keyof InputsProps)} // asserção de tipo aqui
+                        {...register(id as keyof InputsProps)}
+                        error={!!errors[id as keyof InputsProps]}
+                        helperText={errors[id as keyof InputsProps]?.message}
                       />
                     </Grid>
                   ))}
@@ -230,7 +231,7 @@ console.log(data)
                   Seção 4 - Informações Conjuge:
                 </Typography>
                 <Grid container spacing={2}>
-                  {fieldsSessao4.map(({ label, id }) => (
+                  {fieldsSessao4.map(({ label, id}) => (
                     <Grid item xs={12} sm={6} key={id}>
                       <InputLabel>{label}</InputLabel>
                       <TextField
@@ -240,7 +241,9 @@ console.log(data)
                         sx={{
                           borderRadius: "4px",
                         }}
-                        {...register(id as keyof InputsProps)} // asserção de tipo aqui
+                        {...register(id as keyof InputsProps)}
+                        error={!!errors[id as keyof InputsProps]}
+                        helperText={errors[id as keyof InputsProps]?.message}
                       />
                     </Grid>
                   ))}
@@ -281,6 +284,8 @@ console.log(data)
                             marginBottom: "14px",
                           }}
                           {...register(field.id as keyof InputsProps)}
+                          error={!!errors[field.id as keyof InputsProps]}
+                          helperText={errors[field.id as keyof InputsProps]?.message}
                         />
                       </Grid>
                     ))}

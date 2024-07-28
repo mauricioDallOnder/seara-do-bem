@@ -1,13 +1,13 @@
 //novo arquivo
 export const fieldsSessao1 = [
-  { label: "Nome do Beneficiário", id: "nome_beneficiario" },
-  { label: "Data de Ingresso", id: "data_ingresso" },
-  { label: "Telefone", id: "telefone" },
-  { label: "Rua", id: "rua" },
-  { label: "Nº", id: "numero" },
-  { label: "Bairro", id: "bairro" },
-
+  { label: "Nome do Beneficiário", id: "nome_beneficiario", validation: { required: "Nome é obrigatório" } },
+  { label: "Data de Ingresso (Digitar no formato dd/mm/aaaa)", id: "data_ingresso", validation: { required: "Data de ingresso é obrigatória", pattern: { value: /^\d{2}\/\d{2}\/\d{4}$/, message: "Formato de data inválida use dd/mm/yyyy" } } },
+  { label: "Telefone", id: "telefone", validation: { required: "Telefone é obrigatório", pattern: { value: /^\d{10,11}$/, message: "Formato de telefone invalido colocar 10 ou 11 digitos" } } },
+  { label: "Rua", id: "rua", validation: { required: "Rua é obrigatório" } },  // sem validação específica
+  { label: "Nº", id: "numero", validation: {} },
+  { label: "Bairro", id: "bairro", validation: {} },
 ];
+
 export const fieldsSessao2 = [
   { label: "Estado Civil", id: "estadoCivil" },
   { label: "Data de Nascimento", id: "nascimento" },
@@ -71,7 +71,6 @@ export const BoxStyleCadastro = {
   borderRadius: "3px",
   boxShadow: "0 9px 40px rgba(42, 42, 42)",
   fontSize: "16px",
-  maxWidth: "752px",
   width: "100%",
   display: "flex",
   flexDirection: "column",
