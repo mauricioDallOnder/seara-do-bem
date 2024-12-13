@@ -45,12 +45,14 @@ export default function ListaBeneficiarios() {
               display: "flex",
               alignItems: "center",
               mb: 1,
+              backgroundColor: "#ffffff",
+              color:"black",
               justifyContent: "space-between",
               borderBottom: "1px solid #ccc",
               pb: 1,
             }}
           >
-            <Typography variant="body1">
+            <Typography variant="body1" sx={{color:"black"}} >
               {beneficiario.nome_beneficiario}
             </Typography>
             <Button
