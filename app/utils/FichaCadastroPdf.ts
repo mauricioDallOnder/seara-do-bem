@@ -25,6 +25,20 @@ export default function convertToDependentes(data: InputsProps) {
   return dependentes;
 }
 
+function formatDate(value: string): string {
+  if (typeof value === "string") {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    }
+  }
+  return value;
+}
+
 export const generatePdf = (data: InputsProps) => {
   const doc = new jsPDF("p", "pt");
   const fontSizeText = 12;
@@ -57,10 +71,14 @@ export const generatePdf = (data: InputsProps) => {
     doc.setFontSize(fontSizeText);
 
     fields.forEach((field) => {
-      const value = stringKeyedData[field];
+      let value = stringKeyedData[field];
+
+      // Formata a data se o campo for 'data_ingresso' ou começar com 'nascimento'
+      if (field === "data_ingresso" || field.startsWith("nascimento")) {
+        value = formatDate(value);
+      }
 
       if (field === "dependentes") {
-        // Garante que value seja um array; caso contrário, utiliza array vazio
         const dependentesArray = Array.isArray(value) ? value : [];
 
         const columnWidth = (pageWidth - 2 * margin) / 4;
@@ -82,8 +100,11 @@ export const generatePdf = (data: InputsProps) => {
         for (let i = 0; i < 5; i++) {
           const dependent = dependentesArray[i] || {};
 
-          // Desenha as células para cada coluna (Nome, Parentesco, etc.)
-          // Ajuste conforme sua necessidade
+          // Se tiver data de nascimento do dependente, formate-a
+          if (dependent["nascimento"]) {
+            dependent["nascimento"] = formatDate(dependent["nascimento"]);
+          }
+
           ["nome", "parentesco", "nascimento", "escolarização"].forEach(
             (col, idx) => {
               doc.rect(
