@@ -56,7 +56,6 @@ export default function TabelaDados() {
             const startDate = new Date(year, month - 1, day);
             const now = new Date();
 
-            // Calculo do último mês
             const startPlusTwoMonths = new Date(startDate);
             startPlusTwoMonths.setMonth(startPlusTwoMonths.getMonth() + 2);
 
@@ -65,7 +64,7 @@ export default function TabelaDados() {
 
             if (now >= startPlusTwoMonths && now < startPlusThreeMonths) {
               // Estamos no último mês
-              observacaoFinal = "ultimo mes que pega a cesta basica!";
+              observacaoFinal = `ultimo mes que pega a cesta basica! (início: ${dateStr})`;
               lastMonth = true;
             }
           }
