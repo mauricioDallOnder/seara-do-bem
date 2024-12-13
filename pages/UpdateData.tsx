@@ -57,7 +57,6 @@ export default function ConsultaBeneficiarios() {
     const beneficiario = data.find((item) => item.nome_beneficiario === name);
     if (beneficiario) {
       Object.entries(beneficiario).forEach(([key, value]) => {
-        // Verificar se o campo é uma data e formatar se necessário
         const formattedValue =
           key === "data_ingresso" || key.startsWith("nascimento")
             ? formatDate(value as string)
@@ -293,6 +292,26 @@ export default function ConsultaBeneficiarios() {
                 ))}
               </List>
               <List sx={ListStyle}>
+                {/* Instruções acima do campo de observações */}
+                <Typography 
+                  sx={{ 
+                    color: 'red', 
+                    fontWeight: 'bold', 
+                    marginBottom: '10px' 
+                  }}
+                >
+                  Instruções para preenchimento das observações:
+                </Typography>
+                <Typography 
+                  component="div" 
+                  sx={{ color: 'red', fontWeight: 'bold', marginBottom: '10px' }}
+                >
+                  <ul style={{ paddingLeft: '20px' }}>
+                    <li>Ao escrever <strong>"DESLIGADO"</strong> em caixa alta nas observações, o beneficiário será removido do programa.</li>
+                    <li>Ao escrever <strong>"fica por 3 meses a partir de DD/MM/YYYY"</strong>, a data deve estar no formato <strong>DD/MM/YYYY</strong>. Assim, o beneficiário ficará ativo por 3 meses a partir dessa data, e o último mês será destacado no relatório.</li>
+                  </ul>
+                </Typography>
+
                 <InputLabel sx={TituloSecaoStyle}>
                   Seção 6 - Observações:
                 </InputLabel>
@@ -305,7 +324,7 @@ export default function ConsultaBeneficiarios() {
                     justifyContent="center"
                   >
                     <textarea
-                      placeholder='Em caso de desligamento a observação deve conter, em caixa alta,a seguinte palavra: "DESLIGADO"'
+                      placeholder='Exemplo: "DESLIGADO" ou "fica por 3 meses a partir de 10/02/2024"'
                       style={{
                         minWidth: "100%",
                         maxWidth: "1140px",
