@@ -308,7 +308,8 @@ export default function ConsultaBeneficiarios() {
                 >
                   <ul style={{ paddingLeft: '20px' }}>
                     <li>Ao escrever <strong>"DESLIGADO"</strong> em caixa alta nas observações, o beneficiário será removido do programa.</li>
-                    <li>Ao escrever <strong>"fica por 3 meses a partir de DD/MM/YYYY"</strong>, a data deve estar no formato <strong>DD/MM/YYYY</strong>. Assim, o beneficiário ficará ativo por 3 meses a partir dessa data, e o último mês será destacado no relatório.</li>
+                    <li>Ao escrever <strong>"fica por 3 meses a partir de DD/MM/AAAA"</strong>, o beneficiário ficará ativo por 3 meses a partir dessa data, e no último mês ele será destacado o relatório.</li>
+                    <p style={{color:'red'}}>A data deve estar sempre no formato <strong>DD/MM/AAAA</strong>.</p> 
                   </ul>
                 </Typography>
 
