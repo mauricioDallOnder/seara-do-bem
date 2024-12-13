@@ -26,6 +26,7 @@ const pages = [
   { title: "Cadastro", link: "/Registration" },
   { title: "Atualização", link: "/UpdateData" },
   { title: "Frequencia Mensal", link: "https://script.google.com/macros/s/AKfycbxHQHqhYDae5zRtmHcIoHLlIlBkJKIdxBy__-lm4O_nMIHJ0T3tt6r28rwHBhvykGsKKA/exec" },
+  {title: "Lista de usuários", link: "/ListaUsuarios"}
 ];
 //teste
 //link atualizado
