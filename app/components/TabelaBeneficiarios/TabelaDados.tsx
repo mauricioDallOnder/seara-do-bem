@@ -53,16 +53,10 @@ export default function TabelaDados() {
             invalidDate = true;
           } else {
             // Data válida, verificar se estamos no último mês
-            const startDate = new Date(year, month - 1, day); // mês base 0
+            const startDate = new Date(year, month - 1, day);
             const now = new Date();
 
-            // O último mês seria após completar 2 meses do startDate.
-            // Exemplo: startDate = 10/02/2024. 3 meses: 
-            // 1º mês: até 10/03/2024
-            // 2º mês: até 10/04/2024
-            // 3º mês: até 10/05/2024
-            // Se agora >= (startDate + 2 meses) e < (startDate + 3 meses), é o último mês.
-
+            // Calculo do último mês
             const startPlusTwoMonths = new Date(startDate);
             startPlusTwoMonths.setMonth(startPlusTwoMonths.getMonth() + 2);
 
@@ -140,13 +134,27 @@ export default function TabelaDados() {
         if (data.section === 'body') {
           const rowData = filteredData[data.row.index];
 
-          // Se estiver no último mês, o nome (coluna 1) fica vermelho
-          // Se a data for inválida ou for o último mês, a observação (coluna 5) fica vermelha
-          if (data.column.index === 1 && rowData.lastMonth) {
-            data.cell.styles.textColor = [255, 0, 0];
+          // Índices das colunas:
+          // 0: N
+          // 1: NOME
+          // 2: DATA DE INGRESSO
+          // 3: TELEFONE
+          // 4: ENDEREÇO
+          // 5: OBSERVAÇÕES
+          // 6: ASSINATURA
+
+          // Caso seja o último mês: deixar NOME (1), DATA DE INGRESSO (2), TELEFONE (3), ENDEREÇO (4) e OBSERVAÇÕES (5) em vermelho e bold
+          if (rowData.lastMonth) {
+            if ([1, 2, 3, 4, 5].includes(data.column.index)) {
+              data.cell.styles.textColor = [255, 0, 0];
+              data.cell.styles.fontStyle = 'bold';
+            }
           }
-          if (data.column.index === 5 && (rowData.lastMonth || rowData.invalidDate)) {
+
+          // Caso seja data inválida: apenas OBSERVAÇÕES (5) em vermelho e bold
+          if (rowData.invalidDate && data.column.index === 5) {
             data.cell.styles.textColor = [255, 0, 0];
+            data.cell.styles.fontStyle = 'bold';
           }
         }
       },
