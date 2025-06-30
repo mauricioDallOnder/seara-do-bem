@@ -80,12 +80,14 @@ interface ChildrenProps {
 
 interface DataContextType {
   data: InputsProps[];
+  loading: boolean; // <-- Adicionado
   sendDataToApi: (data: InputsProps) => Promise<void>;
   updateDataInApi: (data: InputsProps) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType>({
   data: [],
+  loading: true, // <-- Valor inicial
   sendDataToApi: async () => {}, // Adicione esta linha
   updateDataInApi:async () => {},
 
@@ -98,19 +100,25 @@ const useData = () => {
 
 const DataProvider: React.FC<ChildrenProps> = ({ children }) => {
   const [data, setData] = useState<InputsProps[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // 3. CORRIJA O useEffect PARA RODAR APENAS UMA VEZ
   useEffect(() => {
     const getDataToApi = async () => {
+      // Inicia o carregamento. Embora já comece como true, é uma boa prática.
+      setLoading(true);
       try {
         const response = await axios.get("https://script.google.com/macros/s/AKfycbwPtusYugIept4aEoRqpGsSAW07rl6mbIctHo7J_TiAnAZyOexKExOBqF9sSr9NIaBrbQ/exec");
-        console.log('Response data:', response.data); // Adicione isso para verificar a estrutura da resposta
         setData(response.data);
       } catch (error) {
         console.error("Ocorreu um erro ao buscar dados da API:", error);
+      } finally {
+        // Finaliza o carregamento, independentemente de sucesso ou erro.
+        setLoading(false);
       }
     };
     getDataToApi();
-  }, [data]); 
+  }, []); // <-- ARRAY DE DEPENDÊNCIAS VAZIO PARA EVITAR O LOOP 
   
 
   const sendDataToApi = async (data: InputsProps) => {
@@ -131,7 +139,8 @@ const DataProvider: React.FC<ChildrenProps> = ({ children }) => {
   };
 
   return (
-    <DataContext.Provider value={{ data, sendDataToApi,updateDataInApi }}>
+    // 4. FORNEÇA 'loading' NO VALUE DO PROVIDER
+    <DataContext.Provider value={{ data, loading, sendDataToApi, updateDataInApi }}>
       {children}
     </DataContext.Provider>
   );
