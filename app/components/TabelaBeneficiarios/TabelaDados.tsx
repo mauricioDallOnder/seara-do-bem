@@ -4,7 +4,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export default function TabelaDados() {
-  const { data } = useData();
+  // 1. PEGUE O ESTADO 'loading' DO CONTEXTO
+  const { data, loading } = useData();
   const date = new Date();
   const formatter = new Intl.DateTimeFormat('pt-BR', { month: 'long' });
   const currentMonth = formatter.format(date);
@@ -165,13 +166,16 @@ export default function TabelaDados() {
   };
 
   return (
+    // 2. ATUALIZE O BOTÃO PARA USAR O ESTADO 'loading'
     <Button
       variant="contained"
       color="success"
       size="small"
       onClick={() => exportPDF(data)}
+      disabled={loading} // <-- Desabilita o botão enquanto 'loading' for true
     >
-      Tabela de ativos do programa
+      {/* Muda o texto do botão para dar feedback ao usuário */}
+      {loading ? "Carregando..." : "Tabela de ativos do programa"}
     </Button>
   );
 }
