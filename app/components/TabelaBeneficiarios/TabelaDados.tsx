@@ -3,7 +3,8 @@ import { Button } from "@mui/material";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-type ThreeMonthState = "none" | "active" | "last_month" | "exceeded" | "invalid_date";
+type ProgramState = "none" | "active" | "last_month" | "exceeded" | "invalid_date";
+type ProgramRule = "none" | "duration" | "until";
 
 type RowPdf = {
   numero: number;
@@ -13,8 +14,13 @@ type RowPdf = {
   endereco: string;
   observacao: string;
   assinatura: string;
-  threeMonthState: ThreeMonthState;
+  programState: ProgramState;
   invalidDate: boolean;
+
+  rule: ProgramRule;
+  months?: number;       // 1..6 (quando rule="duration")
+  startDateStr?: string; // dd/mm/yyyy (quando rule="duration")
+  endDateStr?: string;   // dd/mm/yyyy (quando rule="until" ou calculado)
 };
 
 function normalizeText(text: string) {
@@ -42,7 +48,7 @@ function parseDdMmYyyy(dateStr: string) {
 
   const d = new Date(year, month - 1, day);
 
-  // valida overflow (ex: 31/02 vira março)
+  // valida overflow (ex.: 31/02 vira março)
   if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) {
     return { valid: false as const, date: null as Date | null };
   }
@@ -56,75 +62,163 @@ function addMonthsSafe(date: Date, months: number) {
   return d;
 }
 
+function subMonthsSafe(date: Date, months: number) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() - months);
+  return d;
+}
+
+function monthsFromToken(token: string): number | null {
+  const t = normalizeText(token);
+
+  const n = parseInt(t, 10);
+  if (Number.isFinite(n)) return n;
+
+  const map: Record<string, number> = {
+    um: 1,
+    uma: 1,
+    dois: 2,
+    duas: 2,
+    tres: 3,
+    quatro: 4,
+    cinco: 5,
+    seis: 6,
+  };
+  return map[t] ?? null;
+}
+
 function prependTag(tag: string, original: string) {
   const t = (original || "").trim();
   if (!t) return tag;
-  // evita duplicar tag se já existir
-  if (t.toLowerCase().includes(tag.toLowerCase())) return t;
+  if (normalizeText(t).includes(normalizeText(tag))) return t;
   return `${tag}\n${t}`;
 }
 
-function detectThreeMonthsState(observacoesRaw: string) {
-  const raw = observacoesRaw || "";
-  const normalized = normalizeText(raw);
+// Retorna algo no formato pt-BR só para exibir na observação/tag.
+// Para lógica usamos Date.
+function formatPtBr(d: Date) {
+  return d.toLocaleDateString("pt-BR");
+}
 
-  // Se o texto indicar explicitamente que não deve permanecer após 3 meses,
-  // isso é um sinal de "limite excedido/controle" (mesmo se a data não estiver presente).
-  const exceededByText =
-    /nao\s+permanec(?:er|e)\s+mais/.test(normalized) ||
-    /nao\s+permanecer\s+mais\s+depois\s+dos?\s+3\s+mes/.test(normalized) ||
-    /nao\s+permanecer\s+depois\s+dos?\s+3\s+mes/.test(normalized);
-
-  // Captura data após "3 meses a partir de dd/mm/yyyy" com variações (quebras de linha já normalizadas)
+function detectFromDuration(normalized: string): {
+  state: ProgramState;
+  rule: ProgramRule;
+  months?: number;
+  startDateStr?: string;
+  endDateStr?: string;
+} | null {
+  // Grupos posicionais:
+  // 1 => months token
+  // 2 => date dd/mm/yyyy
   const pattern =
-    /(?:fica|permanece|permanecer)?(?:\s+no\s+programa)?(?:\s+por)?\s+3\s+mes(?:es)?\s+(?:a\s*partir\s*(?:de)?)\s+(\d{2}\/\d{2}\/\d{4})/i;
+    /(?:fica|permanece|permanecer)?(?:\s+no\s+programa)?(?:\s+por)?\s+(\d+|um|uma|dois|duas|tres|quatro|cinco|seis)\s+mes(?:es)?\s+(?:a\s*partir\s*(?:de)?)\s+(\d{2}\/\d{2}\/\d{4})/i;
 
   const match = normalized.match(pattern);
+  if (!match) return null;
 
-  if (!match) {
-    // fallback: "3 meses a partir de dd/mm/yyyy"
-    const fallback = /3\s+mes(?:es)?\s+(?:a\s*partir\s*(?:de)?)\s+(\d{2}\/\d{2}\/\d{4})/i;
-    const m2 = normalized.match(fallback);
+  const monthsToken = match[1];
+  const startDateStr = match[2];
 
-    if (!m2) {
-      // sem data, mas texto sugere limite/controle
-      if (exceededByText) return { state: "exceeded" as ThreeMonthState, dateStr: "", startDate: null as Date | null };
-      return { state: "none" as ThreeMonthState, dateStr: "", startDate: null as Date | null };
-    }
-
-    const dateStr2 = m2[1];
-    const parsed2 = parseDdMmYyyy(dateStr2);
-    if (!parsed2.valid) return { state: "invalid_date" as ThreeMonthState, dateStr: dateStr2, startDate: null as Date | null };
-
-    // com data: decide pelo calendário
-    const startDate2 = parsed2.date!;
-    const now = new Date();
-    const plus2 = addMonthsSafe(startDate2, 2);
-    const plus3 = addMonthsSafe(startDate2, 3);
-
-    if (now >= plus2 && now < plus3) return { state: "last_month" as ThreeMonthState, dateStr: dateStr2, startDate: startDate2 };
-    if (now >= plus3) return { state: "exceeded" as ThreeMonthState, dateStr: dateStr2, startDate: startDate2 };
-    return { state: "active" as ThreeMonthState, dateStr: dateStr2, startDate: startDate2 };
+  const months = monthsFromToken(monthsToken);
+  if (!months || months < 1 || months > 6) {
+    return { state: "none", rule: "duration" };
   }
 
-  const dateStr = match[1];
-  const parsed = parseDdMmYyyy(dateStr);
-
+  const parsed = parseDdMmYyyy(startDateStr);
   if (!parsed.valid) {
-    return { state: "invalid_date" as ThreeMonthState, dateStr, startDate: null as Date | null };
+    return { state: "invalid_date", rule: "duration", months, startDateStr };
   }
 
   const startDate = parsed.date!;
   const now = new Date();
-  const plus2 = addMonthsSafe(startDate, 2);
-  const plus3 = addMonthsSafe(startDate, 3);
 
-  if (now >= plus2 && now < plus3) return { state: "last_month" as ThreeMonthState, dateStr, startDate };
-  if (now >= plus3) return { state: "exceeded" as ThreeMonthState, dateStr, startDate };
+  const endDate = addMonthsSafe(startDate, months);
+  const lastMonthStart = addMonthsSafe(startDate, Math.max(months - 1, 0));
 
-  // Mesmo dentro do prazo, se o texto diz "não permanecer mais depois dos 3 meses",
-  // mantemos como active (porque ainda não excedeu), mas isso não pinta vermelho.
-  return { state: "active" as ThreeMonthState, dateStr, startDate };
+  if (now >= endDate) {
+    return {
+      state: "exceeded",
+      rule: "duration",
+      months,
+      startDateStr,
+      endDateStr: formatPtBr(endDate),
+    };
+  }
+
+  if (now >= lastMonthStart) {
+    return {
+      state: "last_month",
+      rule: "duration",
+      months,
+      startDateStr,
+      endDateStr: formatPtBr(endDate),
+    };
+  }
+
+  return {
+    state: "active",
+    rule: "duration",
+    months,
+    startDateStr,
+    endDateStr: formatPtBr(endDate),
+  };
+}
+
+function detectFromUntil(normalized: string): {
+  state: ProgramState;
+  rule: ProgramRule;
+  endDateStr?: string;
+} | null {
+  // Grupo posicional:
+  // 1 => date dd/mm/yyyy
+  // Observação: "até" vira "ate" pela normalização
+  const pattern = /\bate\b\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i;
+  const match = normalized.match(pattern);
+  if (!match) return null;
+
+  const endDateStr = match[1];
+  const parsed = parseDdMmYyyy(endDateStr);
+
+  if (!parsed.valid) {
+    return { state: "invalid_date", rule: "until", endDateStr };
+  }
+
+  const endDate = parsed.date!;
+  const now = new Date();
+
+  const lastMonthStart = subMonthsSafe(endDate, 1);
+
+  // Encerrado: após a data final (se quiser incluir o dia final como encerrado, troque > por >=)
+  if (now > endDate) {
+    return { state: "exceeded", rule: "until", endDateStr };
+  }
+
+  if (now >= lastMonthStart) {
+    return { state: "last_month", rule: "until", endDateStr };
+  }
+
+  return { state: "active", rule: "until", endDateStr };
+}
+
+function detectProgramStateFromObservacoes(observacoesRaw: string): {
+  state: ProgramState;
+  rule: ProgramRule;
+  months?: number;
+  startDateStr?: string;
+  endDateStr?: string;
+} {
+  const raw = observacoesRaw || "";
+  const normalized = normalizeText(raw);
+
+  // prioridade: "por X meses a partir de"
+  const byDuration = detectFromDuration(normalized);
+  if (byDuration) return byDuration;
+
+  // fallback: "até DD/MM/AAAA"
+  const byUntil = detectFromUntil(normalized);
+  if (byUntil) return byUntil;
+
+  return { state: "none", rule: "none" };
 }
 
 export default function TabelaDados() {
@@ -158,24 +252,38 @@ export default function TabelaDados() {
         const endereco = `${elt.rua || ""}, ${elt.numero || ""}, ${elt.bairro || ""}`;
 
         const obsRaw = elt.Observações || "";
-        const three = detectThreeMonthsState(obsRaw);
+        const detected = detectProgramStateFromObservacoes(obsRaw);
 
         let observacaoFinal = obsRaw;
         let invalidDate = false;
 
-        if (three.state === "invalid_date") {
-          observacaoFinal = 'Data invalida: a data deve estar no formato "DD/MM/AAAA".';
+        if (detected.state === "invalid_date") {
+          observacaoFinal = 'Data inválida: use "DD/MM/AAAA".';
           invalidDate = true;
-        } else if (three.state === "last_month") {
-          const tag = three.dateStr
-            ? `ÚLTIMO MÊS (início: ${three.dateStr})`
-            : "ÚLTIMO MÊS";
-          observacaoFinal = prependTag(tag, obsRaw);
-        } else if (three.state === "exceeded") {
-          const tag = three.dateStr
-            ? `LIMITE DE PERMANENCIA EXCEDIDO (início: ${three.dateStr})`
-            : "LIMITE DE PERMANENCIA EXCEDIDO (sem data detectável)";
-          observacaoFinal = prependTag(tag, obsRaw);
+        } else if (detected.state === "last_month") {
+          if (detected.rule === "duration") {
+            observacaoFinal = prependTag(
+              `ÚLTIMO MÊS (prazo: ${detected.months} mês(es), início: ${detected.startDateStr})`,
+              obsRaw
+            );
+          } else if (detected.rule === "until") {
+            observacaoFinal = prependTag(
+              `ÚLTIMO MÊS (até: ${detected.endDateStr})`,
+              obsRaw
+            );
+          }
+        } else if (detected.state === "exceeded") {
+          if (detected.rule === "duration") {
+            observacaoFinal = prependTag(
+              `PRAZO DE PERMANÊNCIA NO PROGRAMA ENCERRADO (prazo: ${detected.months} mês(es), início: ${detected.startDateStr})`,
+              obsRaw
+            );
+          } else if (detected.rule === "until") {
+            observacaoFinal = prependTag(
+              `PRAZO DE PERMANÊNCIA NO PROGRAMA ENCERRADO (até: ${detected.endDateStr})`,
+              obsRaw
+            );
+          }
         }
 
         return {
@@ -186,8 +294,12 @@ export default function TabelaDados() {
           endereco,
           observacao: observacaoFinal,
           assinatura: elt.assinatura || "",
-          threeMonthState: three.state,
+          programState: detected.state,
           invalidDate,
+          rule: detected.rule,
+          months: detected.months,
+          startDateStr: detected.startDateStr,
+          endDateStr: detected.endDateStr,
         } as RowPdf;
       });
 
@@ -233,7 +345,7 @@ export default function TabelaDados() {
         2: { cellWidth: 70 },
         3: { cellWidth: 70 },
         4: { cellWidth: 150 },
-        5: { cellWidth: 160 },
+        5: { cellWidth: 180 },
       },
       styles: {
         cellPadding: { top: 2, right: 2, bottom: 2, left: 2 },
@@ -245,17 +357,15 @@ export default function TabelaDados() {
 
         const rowData = filteredData[cell.row.index];
 
-        // Pintar em vermelho:
-        // - last_month (último mês)
-        // - exceeded (limite excedido)
-        if (rowData.threeMonthState === "last_month" || rowData.threeMonthState === "exceeded") {
+        // vermelho para: último mês OU prazo encerrado
+        if (rowData.programState === "last_month" || rowData.programState === "exceeded") {
           if ([1, 2, 3, 4, 5].includes(cell.column.index)) {
             cell.cell.styles.textColor = [255, 0, 0];
             cell.cell.styles.fontStyle = "bold";
           }
         }
 
-        // Data inválida: apenas Observações em vermelho
+        // data inválida: apenas Observações em vermelho
         if (rowData.invalidDate && cell.column.index === 5) {
           cell.cell.styles.textColor = [255, 0, 0];
           cell.cell.styles.fontStyle = "bold";
