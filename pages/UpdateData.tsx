@@ -217,12 +217,12 @@ export default function ConsultaBeneficiarios() {
 
       // 2) Recarrega lista (sem reload de página)
       await refreshData();
-
+      /*
       // 3) PDF (com dados normalizados)
       payload.dependentes = convertToDependentes(payload);
       const doc = generatePdf(payload);
       doc.save(`Ficha Cadastral de atualização - ${payload.nome_beneficiario} - ${payload.data_ingresso}`);
-
+      */
       setSnack({ open: true, type: "success", msg: "Dados atualizados com sucesso." });
 
       // opcional: limpa para escolher outro rapidamente
