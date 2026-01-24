@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import { InputsProps, StringKeyedInputsProps } from "../context/DataContext";
+import { InputsProps} from "../context/DataContext";
 import { sectionsPDF } from "./constants";
 
 export default function convertToDependentes(data: InputsProps) {
@@ -57,7 +57,7 @@ export const generatePdf = (data: InputsProps) => {
   });
   YPosition += 30;
 
-  const stringKeyedData: StringKeyedInputsProps = data;
+  const stringKeyedData: any = data;
 
   sectionsPDF.forEach(({ title, fields }, index) => {
     if (index !== 0) {

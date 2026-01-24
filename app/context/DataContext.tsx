@@ -1,4 +1,3 @@
-//atualizado 
 "use client";
 import axios from "axios";
 import React, {
@@ -7,7 +6,9 @@ import React, {
   useEffect,
   ReactNode,
   useContext,
+  useCallback,
 } from "react";
+
 export type Dependente = {
   nome: string;
   parentesco: string;
@@ -59,20 +60,8 @@ export type InputsProps = {
   nascimento_dependente5?: string;
   escolarizacao_dependente5?: string;
   faltas?: string;
-  assinatura?:string
+  assinatura?: string;
 };
-
-export type StringKeyedInputsProps = {
-  [key: string]: any;
-};
-
-export interface FormDataTable extends InputsProps {
-  data_ingresso: string;
-  nome_beneficiario: string;
-  telefone: string;
-  endereco: string;
-  Observações: string;
-}
 
 interface ChildrenProps {
   children: ReactNode;
@@ -80,67 +69,71 @@ interface ChildrenProps {
 
 interface DataContextType {
   data: InputsProps[];
-  loading: boolean; // <-- Adicionado
+  loading: boolean;
+  refreshData: () => Promise<void>;
   sendDataToApi: (data: InputsProps) => Promise<void>;
   updateDataInApi: (data: InputsProps) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType>({
   data: [],
-  loading: true, // <-- Valor inicial
-  sendDataToApi: async () => {}, // Adicione esta linha
-  updateDataInApi:async () => {},
-
+  loading: true,
+  refreshData: async () => {},
+  sendDataToApi: async () => {},
+  updateDataInApi: async () => {},
 });
 
-const useData = () => {
-  const context = useContext(DataContext);
-  return context;
-};
+const useData = () => useContext(DataContext);
+
+const GAS_URL =
+  "https://script.google.com/macros/s/AKfycbwPtusYugIept4aEoRqpGsSAW07rl6mbIctHo7J_TiAnAZyOexKExOBqF9sSr9NIaBrbQ/exec";
 
 const DataProvider: React.FC<ChildrenProps> = ({ children }) => {
   const [data, setData] = useState<InputsProps[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 3. CORRIJA O useEffect PARA RODAR APENAS UMA VEZ
-  useEffect(() => {
-    const getDataToApi = async () => {
-      // Inicia o carregamento. Embora já comece como true, é uma boa prática.
-      setLoading(true);
-      try {
-        const response = await axios.get("https://script.google.com/macros/s/AKfycbwPtusYugIept4aEoRqpGsSAW07rl6mbIctHo7J_TiAnAZyOexKExOBqF9sSr9NIaBrbQ/exec");
-        setData(response.data);
-      } catch (error) {
-        console.error("Ocorreu um erro ao buscar dados da API:", error);
-      } finally {
-        // Finaliza o carregamento, independentemente de sucesso ou erro.
-        setLoading(false);
-      }
-    };
-    getDataToApi();
-  }, []); // <-- ARRAY DE DEPENDÊNCIAS VAZIO PARA EVITAR O LOOP 
-  
-
-  const sendDataToApi = async (data: InputsProps) => {
+  const refreshData = useCallback(async () => {
+    setLoading(true);
     try {
-      const response = await axios.post("/api/proxy?method=post", data); // Indicando que você deseja fazer uma requisição POST
-      setData(response.data);
+      const response = await axios.get(GAS_URL);
+      const next = Array.isArray(response.data) ? response.data : [];
+      setData(next);
+    } catch (error) {
+      console.error("Ocorreu um erro ao buscar dados da API:", error);
+      setData([]); // garante array
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
+
+  const sendDataToApi = async (payload: InputsProps) => {
+    try {
+      // Apps Script normalmente escreve via POST
+      await axios.post("/api/proxy?method=post", payload);
+      await refreshData();
     } catch (error) {
       console.error("Ocorreu um erro ao enviar dados para a API:", error);
+      throw error;
     }
   };
+
   const updateDataInApi = async (dataToUpdate: InputsProps) => {
     try {
-      const response = await axios.post("/api/proxy?method=post", { ...dataToUpdate, method: "put" }); 
-      setData(response.data);
+      // Mantém compatível com seu Apps Script: update via POST com method override
+      await axios.post("/api/proxy?method=post", { ...dataToUpdate, method: "put" });
+      await refreshData();
     } catch (error) {
       console.error("Ocorreu um erro ao atualizar os dados na API:", error);
+      throw error;
     }
   };
 
   return (
-    // 4. FORNEÇA 'loading' NO VALUE DO PROVIDER
-    <DataContext.Provider value={{ data, loading, sendDataToApi, updateDataInApi }}>
+    <DataContext.Provider value={{ data, loading, refreshData, sendDataToApi, updateDataInApi }}>
       {children}
     </DataContext.Provider>
   );
