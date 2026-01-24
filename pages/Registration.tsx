@@ -25,34 +25,116 @@ import Layout from "../app/components/TopBarComponents/Layout";
 import { useState } from "react";
 import convertToDependentes, { generatePdf } from "@/app/utils/FichaCadastroPdf";
 
+const DATE_FIELDS = [
+  "data_ingresso",
+  "nascimento",
+  "nascimento_dependente1",
+  "nascimento_dependente2",
+  "nascimento_dependente3",
+  "nascimento_dependente4",
+  "nascimento_dependente5",
+] as const satisfies readonly (keyof InputsProps)[];
+
+
+function isValidBrDateString(s: string) {
+  // DD/MM/AAAA
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return false;
+  const [dd, mm, yyyy] = s.split("/").map((n) => parseInt(n, 10));
+
+  if (yyyy < 1900 || yyyy > 2100) return false;
+  if (mm < 1 || mm > 12) return false;
+  if (dd < 1 || dd > 31) return false;
+
+  // valida overflow (ex.: 31/02)
+  const d = new Date(yyyy, mm - 1, dd);
+  return d.getFullYear() === yyyy && d.getMonth() === mm - 1 && d.getDate() === dd;
+}
+
+function yyyyMmDdToBr(s: string) {
+  // YYYY-MM-DD -> DD/MM/YYYY
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return s;
+  const [, yyyy, mm, dd] = m;
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function normalizeDateToBr(value: unknown) {
+  if (value === null || value === undefined) return "";
+  const s = String(value).trim();
+  if (!s) return "";
+
+  // já está em DD/MM/AAAA
+  if (isValidBrDateString(s)) return s;
+
+  // veio de input type="date": YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const br = yyyyMmDdToBr(s);
+    return isValidBrDateString(br) ? br : "";
+  }
+
+  // veio como ISO: YYYY-MM-DDTHH:mm:ss...
+  const isoMatch = /^(\d{4}-\d{2}-\d{2})T/.exec(s);
+  if (isoMatch) {
+    const br = yyyyMmDdToBr(isoMatch[1]);
+    return isValidBrDateString(br) ? br : "";
+  }
+
+  // Se o usuário digitou algo não reconhecido, devolve "" para evitar "Invalid Date"
+  return "";
+}
+
 export default function CadastroBeneficiarios() {
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<InputsProps>({});
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<InputsProps>({});
+
   const [isSending, setIsSending] = useState(false);
   const { sendDataToApi } = useData();
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
-
-  const onSubmit: SubmitHandler<InputsProps> = async (data) => {
+  const onSubmit: SubmitHandler<InputsProps> = async (formData) => {
     setIsSending(true);
-    if (data.data_ingresso) {
-      data.data_ingresso = formatDate(data.data_ingresso);
-    }
-    // Formatar outras datas se necessário
 
-    await sendDataToApi(data);
-    data.dependentes = convertToDependentes(data);
-    const doc = generatePdf(data);
-    doc.save(`Ficha Cadastral - ${data.nome_beneficiario} - ${data.data_ingresso}`);
-    reset();
-    setIsSending(false);
+    try {
+      // Não mutate o objeto original do RHF; crie payload
+      const payload: InputsProps = { ...formData };
+
+      // Normaliza todas as datas para DD/MM/AAAA antes de enviar
+            
+      for (const key of DATE_FIELDS) {
+        payload[key] = normalizeDateToBr(payload[key]);
+      }
+
+      await sendDataToApi(payload);
+
+      payload.dependentes = convertToDependentes(payload);
+      const doc = generatePdf(payload);
+      doc.save(`Ficha Cadastral - ${payload.nome_beneficiario} - ${payload.data_ingresso}`);
+
+      reset();
+    } finally {
+      setIsSending(false);
+    }
   };
+
+  // validação para campos de data (aceita vazio ou DD/MM/AAAA ou YYYY-MM-DD)
+  const dateValidation = {
+    validate: (v: any) => {
+      const s = String(v || "").trim();
+      if (!s) return true;
+
+      if (isValidBrDateString(s)) return true;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return true; // type="date"
+      if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return true; // ISO
+
+      return 'Data inválida. Use "DD/MM/AAAA".';
+    },
+  };
+
+  const isDateField = (id: string) =>
+  (DATE_FIELDS as readonly string[]).includes(id);
 
   return (
     <Layout>
@@ -73,16 +155,13 @@ export default function CadastroBeneficiarios() {
                   src="https://www.jotform.com/uploads/guest_9cef22d0f1ed2723/form_files/alunos.6466ab2a87c256.49461801.jpg"
                   alt=""
                 />
-                <Typography sx={TituloDaPagina}>
-                  Cadastro de Beneficiários
-                </Typography>
+                <Typography sx={TituloDaPagina}>Cadastro de Beneficiários</Typography>
                 <Typography sx={SubtituloDaPagina}>Seara do Bem</Typography>
               </Box>
             </Box>
+
             <List sx={ListStyle}>
-              <Typography sx={TituloSecaoStyle}>
-                Seção 1 - Identificação do Beneficiário:
-              </Typography>
+              <Typography sx={TituloSecaoStyle}>Seção 1 - Identificação do Beneficiário:</Typography>
               <Grid container spacing={2}>
                 {fieldsSessao1.map(({ label, id, validation }) => (
                   <Grid item xs={12} sm={6} key={id}>
@@ -91,12 +170,14 @@ export default function CadastroBeneficiarios() {
                       id={id}
                       label={label}
                       variant="standard"
-                      sx={{
-                        borderRadius: "4px",
-                      }}
-                      {...register(id as keyof InputsProps, validation)} // aplicação da validação
+                      sx={{ borderRadius: "4px" }}
+                      placeholder={isDateField(id) ? "DD/MM/AAAA" : undefined}
+                      {...register(id as keyof InputsProps, {
+                        ...(validation || {}),
+                        ...(isDateField(id) ? dateValidation : {}),
+                      })}
                       error={!!errors[id as keyof InputsProps]}
-                      helperText={errors[id as keyof InputsProps]?.message}
+                      helperText={errors[id as keyof InputsProps]?.message as any}
                     />
                   </Grid>
                 ))}
@@ -105,9 +186,7 @@ export default function CadastroBeneficiarios() {
 
             <Box>
               <List sx={ListStyle}>
-                <Typography sx={TituloSecaoStyle}>
-                  Seção 2 - Informações Pessoais:
-                </Typography>
+                <Typography sx={TituloSecaoStyle}>Seção 2 - Informações Pessoais:</Typography>
                 <Grid container spacing={2}>
                   {fieldsSessao2.map(({ label, id }) => (
                     <Grid item xs={12} sm={6} key={id}>
@@ -116,19 +195,19 @@ export default function CadastroBeneficiarios() {
                         id={id}
                         label={label}
                         variant="standard"
-                        sx={{
-                          borderRadius: "4px",
-                        }}
-                        {...register(id as keyof InputsProps)} // asserção de tipo aqui
+                        sx={{ borderRadius: "4px" }}
+                        placeholder={isDateField(id) ? "DD/MM/AAAA" : undefined}
+                        {...register(id as keyof InputsProps, isDateField(id) ? dateValidation : undefined)}
+                        error={!!errors[id as keyof InputsProps]}
+                        helperText={errors[id as keyof InputsProps]?.message as any}
                       />
                     </Grid>
                   ))}
                 </Grid>
               </List>
+
               <List sx={ListStyle}>
-                <Typography sx={TituloSecaoStyle}>
-                  Seção 3 - Informações Familiares:
-                </Typography>
+                <Typography sx={TituloSecaoStyle}>Seção 3 - Informações Familiares:</Typography>
                 <Grid container spacing={2}>
                   {fieldsSessao3.map(({ label, id }) => (
                     <Grid item xs={12} sm={6} key={id}>
@@ -137,19 +216,19 @@ export default function CadastroBeneficiarios() {
                         id={id}
                         label={label}
                         variant="standard"
-                        sx={{
-                          borderRadius: "4px",
-                        }}
-                        {...register(id as keyof InputsProps)} // asserção de tipo aqui
+                        sx={{ borderRadius: "4px" }}
+                        placeholder={isDateField(id) ? "DD/MM/AAAA" : undefined}
+                        {...register(id as keyof InputsProps, isDateField(id) ? dateValidation : undefined)}
+                        error={!!errors[id as keyof InputsProps]}
+                        helperText={errors[id as keyof InputsProps]?.message as any}
                       />
                     </Grid>
                   ))}
                 </Grid>
               </List>
+
               <List sx={ListStyle}>
-                <Typography sx={TituloSecaoStyle}>
-                  Seção 4 - Informações Conjuge:
-                </Typography>
+                <Typography sx={TituloSecaoStyle}>Seção 4 - Informações Conjuge:</Typography>
                 <Grid container spacing={2}>
                   {fieldsSessao4.map(({ label, id }) => (
                     <Grid item xs={12} sm={6} key={id}>
@@ -158,39 +237,27 @@ export default function CadastroBeneficiarios() {
                         id={id}
                         label={label}
                         variant="standard"
-                        sx={{
-                          borderRadius: "4px",
-                        }}
-                        {...register(id as keyof InputsProps)} // asserção de tipo aqui
+                        sx={{ borderRadius: "4px" }}
+                        placeholder={isDateField(id) ? "DD/MM/AAAA" : undefined}
+                        {...register(id as keyof InputsProps, isDateField(id) ? dateValidation : undefined)}
+                        error={!!errors[id as keyof InputsProps]}
+                        helperText={errors[id as keyof InputsProps]?.message as any}
                       />
                     </Grid>
                   ))}
                 </Grid>
               </List>
+
               <List sx={ListStyle}>
-                <Typography sx={TituloSecaoStyle}>
-                  Seção 5 - Dependentes:
-                </Typography>
+                <Typography sx={TituloSecaoStyle}>Seção 5 - Dependentes:</Typography>
 
                 {Array.from({ length: 5 }).map((_, dependentIndex) => (
                   <Grid container spacing={2} key={dependentIndex}>
                     {[
-                      {
-                        label: "Nome",
-                        id: `nome_dependente${dependentIndex + 1}`,
-                      },
-                      {
-                        label: "Parentesco",
-                        id: `parentesco_dependente${dependentIndex + 1}`,
-                      },
-                      {
-                        label: "Nascimento",
-                        id: `nascimento_dependente${dependentIndex + 1}`,
-                      },
-                      {
-                        label: "Escolarização",
-                        id: `escolarizacao_dependente${dependentIndex + 1}`,
-                      },
+                      { label: "Nome", id: `nome_dependente${dependentIndex + 1}` },
+                      { label: "Parentesco", id: `parentesco_dependente${dependentIndex + 1}` },
+                      { label: "Nascimento", id: `nascimento_dependente${dependentIndex + 1}` },
+                      { label: "Escolarização", id: `escolarizacao_dependente${dependentIndex + 1}` },
                     ].map((field) => (
                       <Grid item xs={12} sm={3} key={field.id}>
                         <TextField
@@ -198,20 +265,20 @@ export default function CadastroBeneficiarios() {
                           id={field.id}
                           label={field.label}
                           variant="standard"
-                          sx={{
-                            marginBottom: "14px",
-                          }}
-                          {...register(field.id as keyof InputsProps)}
+                          sx={{ marginBottom: "14px" }}
+                          placeholder={field.id.startsWith("nascimento_") ? "DD/MM/AAAA" : undefined}
+                          {...register(field.id as keyof InputsProps, field.id.startsWith("nascimento_") ? dateValidation : undefined)}
+                          error={!!errors[field.id as keyof InputsProps]}
+                          helperText={errors[field.id as keyof InputsProps]?.message as any}
                         />
                       </Grid>
                     ))}
                   </Grid>
                 ))}
               </List>
+
               <List sx={ListStyle}>
-                <InputLabel sx={TituloSecaoStyle}>
-                  Seção 6 - Observações:
-                </InputLabel>
+                <InputLabel sx={TituloSecaoStyle}>Seção 6 - Observações:</InputLabel>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
                     <textarea
@@ -226,8 +293,9 @@ export default function CadastroBeneficiarios() {
                 </Grid>
               </List>
             </Box>
+
             <Button variant="contained" type="submit" disabled={isSending}>
-              {isSending ? 'Cadastrando Dados...' : 'Cadastrar'}
+              {isSending ? "Cadastrando Dados..." : "Cadastrar"}
             </Button>
           </Box>
         </form>
