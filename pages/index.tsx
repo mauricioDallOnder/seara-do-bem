@@ -86,6 +86,24 @@ export default function Home() {
                 </Link>
               </Grid>
 
+               <Grid item xs={12} sm={6} md={3}>
+                <Link href="https://docs.google.com/spreadsheets/d/1TjtX-JT-c3f8Mb_ujSx61IQ2i6Zha4ZPn8by_HyYXjw/edit?gid=1340376132#gid=1340376132">
+                  
+                    <Card style={{textAlign: 'center',background:'transparent',border:'none',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+                      <CardMedia 
+                        component="img"
+                        height="fit-content"
+                        width='fit-content'
+                        image='https://firebasestorage.googleapis.com/v0/b/chat-dos-otarios.appspot.com/o/ceab%2Fclock.png?alt=media&token=061a08d4-b13c-41bb-952b-a1a53b0f9ca3'
+                        alt=""
+                      />
+                      <Typography color='#FFFF' mt={3}  variant="h5">Lista de Desligados de anos anteriores e cadastro de temporários</Typography>
+                      <Typography color='#FFFF' mt={27}  variant="h5"></Typography>
+                    </Card>
+                  
+                </Link>
+              </Grid>
+
              
             </Grid>
           </Container>
