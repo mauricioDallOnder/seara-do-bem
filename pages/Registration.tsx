@@ -294,6 +294,10 @@ export default function CadastroBeneficiarios() {
               </List>
             </Box>
 
+             <Typography variant="body2" sx={{color:"red"}}>
+                     3)Ao escrever nas observações "fica por 3 meses a partir de DD/MM/AAAA", o beneficiário ficará ativo por 3 meses a partir dessa data, e no último mês ele será destacado o relatório.
+                  </Typography>
+            
             <Button variant="contained" type="submit" disabled={isSending}>
               {isSending ? "Cadastrando Dados..." : "Cadastrar"}
             </Button>
