@@ -97,7 +97,7 @@ export default function Home() {
                         image='https://firebasestorage.googleapis.com/v0/b/chat-dos-otarios.appspot.com/o/ceab%2Fclock.png?alt=media&token=061a08d4-b13c-41bb-952b-a1a53b0f9ca3'
                         alt=""
                       />
-                      <Typography color='#FFFF' mt={3}  variant="h5">Lista de Desligados de anos anteriores e cadastro de temporários</Typography>
+                      <Typography color='#FFFF' mt={3}  variant="h5">Lista de Desligados/cadastro de temporários e lista de necessidades</Typography>
                       <Typography color='#FFFF' mt={27}  variant="h5"></Typography>
                     </Card>
                   
